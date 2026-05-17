@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="propeller_link" params="name mesh scale mass ixx iyy izz">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${mass}"/>
+        <inertia
+          ixx="${ixx}"
+          ixy="0"
+          ixz="0"
+          iyy="${iyy}"
+          iyz="0"
+          izz="${izz}"/>
+      </inertial>
+
+      <visual>
+        <geometry>
+          <mesh
+            filename="file://$(find hydrogen)/meshes/${mesh}"
+            scale="${scale}"/>
+        </geometry>
+        <material name="black">
+          <color rgba="0.1 0.1 0.1 1"/>
+        </material>
+      </visual>
+
+      <collision>
+        <geometry>
+          <mesh
+            filename="file://$(find hydrogen)/meshes/${mesh}"
+            scale="${scale}"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="propellers">
+
+    <xacro:propeller_link
+      name="front_propeller"
+      mesh="propellervertical.stl"
+      scale="0.0001 0.0001 0.0001"
+      mass="0.1"
+      ixx="0.00043333"
+      iyy="0.00043333"
+      izz="0.0008"/>
+
+    <xacro:propeller_link
+      name="right_propeller_1"
+      mesh="propellervertical.stl"
+      scale="0.0001 0.0001 0.0001"
+      mass="0.1"
+      ixx="0.00043333"
+      iyy="0.00043333"
+      izz="0.0008"/>
+
+    <xacro:propeller_link
+      name="right_propeller_2"
+      mesh="propellervertical.stl"
+      scale="0.0001 0.0001 0.0001"
+      mass="0.1"
+      ixx="0.00043333"
+      iyy="0.00043333"
+      izz="0.0008"/>
+
+    <xacro:propeller_link
+      name="left_propeller_1"
+      mesh="propellervertical.stl"
+      scale="0.0001 0.0001 0.0001"
+      mass="0.1"
+      ixx="0.00043333"
+      iyy="0.00043333"
+      izz="0.0008"/>
+
+    <xacro:propeller_link
+      name="left_propeller_2"
+      mesh="propellervertical.stl"
+      scale="0.0001 0.0001 0.0001"
+      mass="0.1"
+      ixx="0.00043333"
+      iyy="0.00043333"
+      izz="0.0008"/>
+
+    <!-- Joints -->
+    <joint name="back_propeller_joint" type="continuous">
+      <parent link="hydrogen_frame"/>
+      <child link="front_propeller"/>
+      <origin xyz="-0.3219 -0 0.0775" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+
+    <joint name="right_propeller_1_joint" type="continuous">
+      <parent link="hydrogen_frame"/>
+      <child link="left_propeller_1"/>
+      <origin xyz="-0.1532 0.222 0.085" rpy="-1.57 0 1.57"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+
+    <joint name="right_propeller_2_joint" type="continuous">
+      <parent link="hydrogen_frame"/>
+      <child link="left_propeller_2"/>
+      <origin xyz="0.1737 0.222 0.0775" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+
+    <joint name="left_propeller_1_joint" type="continuous">
+      <parent link="hydrogen_frame"/>
+      <child link="right_propeller_1"/>
+      <origin xyz="-0.1532 -0.222 0.085" rpy="-1.57 0 1.57"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+
+    <joint name="left_propeller_2_joint" type="continuous">
+      <parent link="hydrogen_frame"/>
+      <child link="right_propeller_2"/>
+      <origin xyz="00.1737 -0.222 0.0775" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>
+

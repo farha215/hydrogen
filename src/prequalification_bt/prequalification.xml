@@ -1,0 +1,56 @@
+<root BTCPP_format="4">
+
+    <BehaviorTree ID="PreQualification_Task">
+        <Sequence>
+
+            <!-- 1. Wait for sensors -->
+            <RetryUntilSuccessful num_attempts="-1">
+                <Condition ID="AllSystemsOK" name="all_systems_check"/>
+            </RetryUntilSuccessful>
+
+            <!-- 2. Save Home T0 -->
+            <Action ID="SaveToBlackboard" name="save_t0"
+                    key="{T0}"/>
+
+            <!-- 3. Dive -->
+            <Action ID="DiveToDepth" name="dive"
+                    target_depth="1.5"/>
+
+            <!-- 4. Find and Clear Gate -->
+            <Fallback>
+                <Condition ID="IsObjectSeen" name="is_gate_seen" object="GATE"/>
+                <Action ID="Do360Turn" name="search_for_gate" success_when_seen="GATE"/>
+            </Fallback>
+            <Action ID="AlignWithObject" name="gate_center_align" object="GATE"/>
+            <Action ID="DriveThruGate" name="drive_thru_gate" gate_depth="6.0" entry_pose="{T1}"/>
+
+            <!-- 5. PRE-POLE ALIGNMENT (Centered Approach) -->
+            <Action ID="StayStill" name="post_gate_pause" duration="3.0"/>
+            <Fallback>
+                <Condition ID="IsObjectSeen" name="is_pole_seen" object="POLE"/>
+                <Action ID="Do360Turn" name="search_for_pole" success_when_seen="POLE"/>
+            </Fallback>
+            <Action ID="AlignWithObject" name="initial_pole_align" object="POLE"/>
+
+            <!-- 6. Blind Surge to 2m -->
+            <Action ID="ApproachObject" name="approach_pole" object="POLE" threshold="2.0"/>
+            
+            <!-- 7. SWAY-LESS STEP ORBIT (Consolidated Node) -->
+            <Action ID="NavigateAround" name="orbit_pole" object="POLE" threshold="2.0"/>
+
+            <!-- 8. Visual Return through Gate -->
+            <Action ID="StayStill" name="pre_return_pause" duration="3.0"/>
+            <Fallback>
+                <Condition ID="IsObjectSeen" name="is_gate_seen_for_return" object="GATE"/>
+                <Action ID="Do360Turn" name="search_for_gate_return" success_when_seen="GATE"/>
+            </Fallback>
+            <Action ID="AlignWithObject" name="gate_center_align_return" object="GATE"/>
+            <Action ID="DriveThruGate" name="drive_back_thru_gate" gate_depth="4.0"/>
+
+            <!-- 9. Finish -->
+            <Action ID="StayStill" name="final_stop" duration="3.0"/>
+
+        </Sequence>
+    </BehaviorTree>
+
+</root>

@@ -1,0 +1,151 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="Hydrogen">
+
+  <gazebo>
+    <plugin
+      name="ignition::gazebo::systems::Thruster"
+      filename="ignition-gazebo-thruster-system">
+      <namespace>Hydrogen</namespace>
+      <joint_name>back_propeller_joint</joint_name>
+      <thrust_coefficient>0.004422</thrust_coefficient>
+      <fluid_density>1000</fluid_density>
+      <propeller_diameter>0.2</propeller_diameter>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      name="ignition::gazebo::systems::Thruster"
+      filename="ignition-gazebo-thruster-system">
+      <namespace>Hydrogen</namespace>
+      <joint_name>right_propeller_1_joint</joint_name>
+      <thrust_coefficient>0.004422</thrust_coefficient>
+      <fluid_density>1000</fluid_density>
+      <propeller_diameter>0.2</propeller_diameter>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      name="ignition::gazebo::systems::Thruster"
+      filename="ignition-gazebo-thruster-system">
+      <namespace>Hydrogen</namespace>
+      <joint_name>right_propeller_2_joint</joint_name>
+      <thrust_coefficient>0.004422</thrust_coefficient>
+      <fluid_density>1000</fluid_density>
+      <propeller_diameter>0.2</propeller_diameter>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      name="ignition::gazebo::systems::Thruster"
+      filename="ignition-gazebo-thruster-system">
+      <namespace>Hydrogen</namespace>
+      <joint_name>left_propeller_1_joint</joint_name>
+      <thrust_coefficient>0.004422</thrust_coefficient>
+      <fluid_density>1000</fluid_density>
+      <propeller_diameter>0.2</propeller_diameter>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      name="ignition::gazebo::systems::Thruster"
+      filename="ignition-gazebo-thruster-system">
+      <namespace>Hydrogen</namespace>
+      <joint_name>left_propeller_2_joint</joint_name>
+      <thrust_coefficient>0.004422</thrust_coefficient>
+      <fluid_density>1000</fluid_density>
+      <propeller_diameter>0.2</propeller_diameter>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      name="ignition::gazebo::systems::Imu"
+      filename="ignition-gazebo-imu-system">
+      <topic>imu</topic>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      name="ignition::gazebo::systems::Sensors"
+      filename="ignition-gazebo-sensors-system">
+      <render_engine>ogre2</render_engine>
+      <min_depth>0.1</min_depth>
+      <max_depth>100.0</max_depth>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      name="ignition::gazebo::systems::Hydrodynamics"
+      filename="ignition-gazebo-hydrodynamics-system">
+      <link_name>base_link</link_name>
+
+        <!-- Linear translational -->
+      <xU>-13.5</xU>
+      <yV>-27.7</yV>
+      <zW>-50.7</zW>
+
+        <!-- Quadratic translational -->
+      <xUabsU>-67.7</xUabsU>
+      <yVabsV>-138.4</yVabsV>
+      <zWabsW>-253.7</zWabsW>
+
+        <!-- Linear rotational -->
+      <kP>-1.3</kP>
+      <mQ>-2.4</mQ>
+      <nR>-1.3</nR>
+
+        <!-- Quadratic rotational -->
+      <kPabsP>-6.4</kPabsP>
+      <mQabsQ>-11.9</mQabsQ>
+      <nRabsR>-6.5</nRabsR>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      name="gz::sim::systems::JointStatePublisher"
+      filename="gz-sim-joint-state-publisher-system">
+      <topic>joint_states</topic>
+      <update_rate>30.0</update_rate>
+      <frame_name>base_link</frame_name>
+      <joint_name>back_propeller_joint</joint_name>
+      <joint_name>left_propeller_1_joint</joint_name>
+      <joint_name>left_propeller_2_joint</joint_name>
+      <joint_name>right_propeller_1_joint</joint_name>
+      <joint_name>right_propeller_2_joint</joint_name>
+    </plugin>
+  </gazebo>
+
+
+    <gazebo>
+      <plugin
+        filename="libauv_absolute_depth.so"
+        name="AUVAbsoluteDepth">
+        <!-- Reference plane (e.g., water surface) -->
+        <reference_z>1.0</reference_z>
+        <!-- Ignition Transport topic -->
+        <topic>/altimeter</topic>
+      </plugin>
+    </gazebo>
+
+    <gazebo>
+      <plugin
+        filename="ignition-gazebo-odometry-publisher-system"
+        name="ignition::gazebo::systems::OdometryPublisher">
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+        <publish_tf>true</publish_tf>
+        <tf_topic>/model/Hydrogen/tf</tf_topic>
+        <odom_topic>/model/Hydrogen/odometry</odom_topic>
+        <odom_publish_frequency>30</odom_publish_frequency>
+      </plugin>
+    </gazebo>
+
+</robot>
+

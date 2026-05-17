@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="Hydrogen">
+
+  <xacro:include filename="robot.gazebo"/>
+  
+  <xacro:include filename="main_frame.xacro"/>
+  
+  <xacro:hydrogen_frame/>
+  
+  <xacro:include filename="propellers.xacro"/>
+  
+  <xacro:propellers/>
+  
+  <xacro:include filename="cameras.xacro"/>
+  
+
+  <xacro:zed_camera
+    name="zed_camera_front_link"
+    parent="hydrogen_frame"
+    xyz="0.31 0 0.1"
+    rpy="0 0 0"/>
+
+
+  <xacro:zed_camera
+    name="zed_camera_down_link"
+    parent="hydrogen_frame"
+    xyz="0.17 0 -0.04"
+    rpy="0 1.5708 0"/>
+
+
+</robot>
+

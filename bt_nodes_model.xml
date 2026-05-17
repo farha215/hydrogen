@@ -1,0 +1,48 @@
+<root BTCPP_format="4">
+    <TreeNodesModel>
+        <Action ID="AlignWithObject">
+            <input_port name="object" type="std::string">GATE or POLE</input_port>
+        </Action>
+        <Condition ID="AllSystemsOK"/>
+        <Action ID="ApproachObject">
+            <input_port name="threshold" type="double">Distance to stop at</input_port>
+            <input_port name="object" type="std::string">GATE or POLE</input_port>
+        </Action>
+        <Action ID="DiveToDepth">
+            <input_port name="target_depth" type="double">Target z in metres</input_port>
+        </Action>
+        <Action ID="Do360Turn">
+            <input_port name="success_when_seen" type="std::string">Return SUCCESS when this object appears: GATE or POLE</input_port>
+        </Action>
+        <Action ID="DriveThruGate">
+            <output_port name="entry_pose" type="Pose">Pose saved at gate entry — use as T1 blackboard key</output_port>
+            <input_port name="gate_depth" type="double">How far to drive after gate disappears from view (metres)</input_port>
+        </Action>
+        <Condition ID="IsObjectSeen">
+            <input_port name="object" type="std::string">GATE or POLE</input_port>
+        </Condition>
+        <Action ID="MoveRelatively">
+            <input_port name="duration" type="double">Seconds to move</input_port>
+            <input_port name="sway" type="double">Rightward error for P-controller</input_port>
+            <input_port name="surge" type="double">Forward error for P-controller</input_port>
+        </Action>
+        <Action ID="NavigateAround">
+            <input_port name="threshold" type="double">Orbit radius in metres</input_port>
+            <input_port name="object" type="std::string">Object to orbit: POLE</input_port>
+        </Action>
+        <Action ID="NavigateTo">
+            <input_port name="reverse" type="bool">If true, face opposite of target yaw (180 deg flip)</input_port>
+            <input_port name="to" type="Pose">Target waypoint</input_port>
+            <input_port name="from" type="Pose">Start waypoint (informational)</input_port>
+        </Action>
+        <Action ID="RelativeTurn">
+            <input_port name="angle" type="double">Relative yaw in radians</input_port>
+        </Action>
+        <Action ID="SaveToBlackboard">
+            <output_port name="key" type="Pose">Blackboard key to store current pose</output_port>
+        </Action>
+        <Action ID="StayStill">
+            <input_port name="duration" type="double">Seconds to stay still</input_port>
+        </Action>
+    </TreeNodesModel>
+</root>

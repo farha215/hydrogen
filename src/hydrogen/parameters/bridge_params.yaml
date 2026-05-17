@@ -1,0 +1,126 @@
+- ros_topic_name: /clock
+  gz_topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  gz_type_name: gz.msgs.Clock
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /hydrogen/back_propeller/cmd_thrust
+  gz_topic_name: /model/Hydrogen/joint/back_propeller_joint/cmd_pos
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: ignition.msgs.Double
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /hydrogen/right_propeller_1/cmd_thrust
+  gz_topic_name: /model/Hydrogen/joint/right_propeller_1_joint/cmd_pos
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: ignition.msgs.Double
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /hydrogen/right_propeller_2/cmd_thrust
+  gz_topic_name: /model/Hydrogen/joint/right_propeller_2_joint/cmd_pos
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: ignition.msgs.Double
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /hydrogen/left_propeller_2/cmd_thrust
+  gz_topic_name: /model/Hydrogen/joint/left_propeller_2_joint/cmd_pos
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: ignition.msgs.Double
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /hydrogen/left_propeller_1/cmd_thrust            
+  gz_topic_name: /model/Hydrogen/joint/left_propeller_1_joint/cmd_pos
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: ignition.msgs.Double
+  direction: ROS_TO_GZ
+  
+- ros_topic_name: /imu
+  gz_topic_name: /imu
+  ros_type_name: sensor_msgs/msg/Imu
+  gz_type_name: ignition.msgs.IMU
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "joint_states"
+  gz_topic_name: "joint_states"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_type_name: "ignition.msgs.Model"
+  direction: "GZ_TO_ROS"
+
+#front camera
+
+- ros_topic_name: "/camera/depth_image_raw/front"
+  gz_topic_name: "/zed_camera_front_link/depth_image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "ignition.msgs.Image"
+  direction: "GZ_TO_ROS"
+
+- ros_topic_name: "/point_cloud_front"
+  gz_topic_name: "/zed_camera_front_link/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "ignition.msgs.PointCloudPacked"
+  direction: "GZ_TO_ROS"
+
+- ros_topic_name: "/camera_info_front"
+  gz_topic_name: "/zed_camera_front_link/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "ignition.msgs.CameraInfo"
+  direction: "GZ_TO_ROS"
+
+- ros_topic_name: "/camera/RGB_image_raw/front"
+  gz_topic_name: "/zed_camera_front_link/image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "ignition.msgs.Image"
+  direction: "GZ_TO_ROS"
+
+#down camera
+
+- ros_topic_name: "/camera/depth_image_raw/down"
+  gz_topic_name: "/zed_camera_down_link/depth_image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "ignition.msgs.Image"
+  direction: "GZ_TO_ROS"
+
+- ros_topic_name: "/point_cloud_down"
+  gz_topic_name: "/zed_camera_down_link/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "ignition.msgs.PointCloudPacked"
+  direction: "GZ_TO_ROS"
+
+- ros_topic_name: "/camera_info_down"
+  gz_topic_name: "/zed_camera_down_link/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "ignition.msgs.CameraInfo"
+  direction: "GZ_TO_ROS"
+
+- ros_topic_name: "/camera/RGB_image_raw/down"
+  gz_topic_name: "/zed_camera_down_link/image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "ignition.msgs.Image"
+  direction: "GZ_TO_ROS"
+
+#altimeter
+- ros_topic_name: /altimeter
+  gz_topic_name: /altimeter
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: ignition.msgs.Double
+  direction: GZ_TO_ROS
+  
+- ros_topic_name: /odom
+  gz_topic_name: /model/Hydrogen/odometry
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: ignition.msgs.Odometry
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /tf
+  gz_topic_name: /model/Hydrogen/tf
+  ros_type_name: tf2_msgs/msg/TFMessage
+  gz_type_name: ignition.msgs.Pose_V
+  direction: GZ_TO_ROS
+  
+  
+
+
+
+
+
+

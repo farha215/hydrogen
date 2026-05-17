@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="hydrogen_frame">
+
+    <link name="base_link"/>
+
+    <link name="hydrogen_frame">
+      <inertial>
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+        <mass value="33.93"/>
+        <inertia
+          ixx="0.1716"
+          ixy="-0.003426"
+          ixz="-0.0003390"
+          iyy="0.1448"
+          iyz="-0.00009018"
+          izz="0.2683"/>
+      </inertial>
+
+      <visual>
+      <origin xyz="0.008 0.0 0.0" rpy="0 0 1.57"/>
+        <geometry>
+          <mesh
+            filename="file://$(find hydrogen)/meshes/auv.stl"
+            scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="grey">
+          <color rgba="0.4 0.4 0.4 1"/>
+        </material>
+      </visual>
+
+      <collision name="hydrogen_frame_collision">
+        <origin xyz="-0.00013 0.0 0.12" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.45 0.35 0.22"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Fixed joint -->
+    <joint name="base_link_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="hydrogen_frame"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="base_link">
+      <sensor name="imu_sensor" type="imu">
+        <always_on>true</always_on>
+        <update_rate>200</update_rate>
+        <visualize>true</visualize>
+        <topic>imu</topic>
+        <ignition_frame_id>base_link</ignition_frame_id>
+      </sensor>
+    </gazebo>
+
+    <!-- Absolute depth sensor (optional) -->
+    <!--
+    <gazebo reference="base_link">
+      <plugin
+        filename="libauv_absolute_depth.so"
+        name="auv_absolute_depth">
+        <reference_z>0.0</reference_z>
+        <topic>/altimeter</topic>
+      </plugin>
+    </gazebo>
+    -->
+
+  </xacro:macro>
+
+</robot>
+
