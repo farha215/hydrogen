@@ -345,10 +345,3 @@ ros2 launch hydrogen AUV.launch.py
   is the next prototype; everything in `src/` currently targets Hydrogen.
 
 ---
-
-## 11. Pointers to memory
-
-For Claude: when re-entering this workspace, also check
-`~/.claude/projects/-home-assemblex-Desktop-hydrogen/memory/`. Notably
-`auv_buoyancy_tuning.md` documents how to keep net buoyancy at ~0.5 % positive
-across changes to main-frame mass or collision-box dimensions.
