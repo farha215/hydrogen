@@ -96,8 +96,6 @@ class ROIDepthFusion(Node):
         out = Detection3DArray()
         out.header = det_msg.header
 
-        self.get_logger().info(f"Processing {len(det_msg.detections)} detections.")
-
         for det in det_msg.detections:
             if not det.results:
                 continue

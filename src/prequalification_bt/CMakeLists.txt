@@ -51,7 +51,10 @@ install(TARGETS prequalification
 )
 
 # XML tree file installed to share/ so ament_index_cpp can locate it at runtime
-install(FILES prequalification.xml
+install(FILES 
+    config/prequalification.xml
+    config/prequalification_groot.xml
+    config/bt_nodes_model.xml
     DESTINATION share/${PROJECT_NAME}
 )
 

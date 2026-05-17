@@ -645,7 +645,7 @@ BT::NodeStatus ActionPassGate::onRunning() {
     } 
     else if (phase_ == Phase::DRIVE) {
         double elapsed = ctx->node->get_clock()->now().seconds() - start_time_;
-        if (elapsed >= (gate_depth_ + 2.0) / 0.5) { // Rough time estimate
+        if (elapsed >= (gate_depth_ + 2.0) / 0.5) { 
             setOutput("entry_pose", entry_pose_);
             return BT::NodeStatus::SUCCESS;
         }
@@ -671,7 +671,6 @@ BT::NodeStatus ActionOrbitPole::onStart() {
 
 BT::NodeStatus ActionOrbitPole::onRunning() {
     auto ctx = getCtx(config());
-    rclcpp::spin_some(ctx->node);
     Pose cur = ctx->getCurrentPose();
     double ox, oy, oz;
     bool seen = ctx->getObjectPosition("POLE", ox, oy, oz);
@@ -715,7 +714,7 @@ BT::NodeStatus ActionOrbitPole::onRunning() {
         else ctx->publishToPico((float)yaw_err * 2.0f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
     }
     else if (phase_ == Phase::ORBIT_STEP_SURGE) {
-        if (ctx->node->get_clock()->now().seconds() - start_time_ >= 3.0) { phase_ = Phase::ORBIT_STEP_ALIGN; steps_completed_++; }
+        if (ctx->node->get_clock()->now().seconds() - start_time_ >= 2.5) { phase_ = Phase::ORBIT_STEP_ALIGN; steps_completed_++; }
         else ctx->publishToPico(normalizeAngle(locked_yaw_ - cur.yaw) * 2.0f, 10.0f, 0.0f, (float)ctx->target_depth, 0);
     }
     return BT::NodeStatus::RUNNING;
@@ -770,7 +769,8 @@ BT::NodeStatus ActionReturnHome::onRunning() {
         } else ctx->publishToPico(-(float)norm_x * 0.8f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
     }
     else if (phase_ == Phase::DRIVE) {
-        if (ctx->node->get_clock()->now().seconds() - start_time_ >= (gate_depth_ + 2.0) / 0.5) return BT::NodeStatus::SUCCESS;
+        // Assuming ~0.5m/s, adding 10.0m adds 20s of surge total.
+        if (ctx->node->get_clock()->now().seconds() - start_time_ >= (gate_depth_ + 10.0) / 0.5) return BT::NodeStatus::SUCCESS;
         ctx->publishToPico(normalizeAngle(home_pose_.yaw - cur.yaw), 10.0f, 0.0f, (float)ctx->target_depth, 0);
     }
     return BT::NodeStatus::RUNNING;

@@ -89,11 +89,6 @@ class ImageCollector(Node):
 
             self.detection_pub.publish(det_array)
 
-            annotated_frame = results[0].plot()
-            ros_image = self.bridge.cv2_to_imgmsg(annotated_frame, encoding="bgr8")
-            ros_image.header = msg.header
-            self.image_pub.publish(ros_image)
-
             self.counter += 1
 
         except Exception as e:
