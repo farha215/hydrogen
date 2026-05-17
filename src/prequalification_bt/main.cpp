@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
     tree.rootBlackboard()->set("robot_context", ctx);
 
     // ── Pre-set waypoints (replace with measured field coordinates) ───────────
-    // T0 is saved dynamically by the SaveToBlackboard node at runtime.
+    // Note: Waypoints like T1 are saved dynamically by the behavior tree nodes at runtime.
     // T1: staging point between gate and pole (through the gate)
     // T2: exit waypoint on the far side (back through the gate toward home)
     Pose t1, t2;

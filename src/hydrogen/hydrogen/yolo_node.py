@@ -53,27 +53,39 @@ class ImageCollector(Node):
             det_array = Detection2DArray()
             det_array.header = msg.header
 
+            # Dictionary to store the best detection (highest confidence) for each class
+            best_detections = {}
+
             for result in results:
                 for box in result.boxes:
-                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                     conf = float(box.conf[0].cpu().numpy())
                     cls = int(box.cls[0].cpu().numpy())
-                    cls_name = self.model.names.get(cls, str(cls))
+                    
+                    if cls not in best_detections or conf > best_detections[cls]['conf']:
+                        best_detections[cls] = {
+                            'conf': conf,
+                            'box': box.xyxy[0].cpu().numpy()
+                        }
 
-                    det = Detection2D()
-                    det.header = msg.header
+            for cls, data in best_detections.items():
+                x1, y1, x2, y2 = data['box']
+                conf = data['conf']
+                cls_name = self.model.names.get(cls, str(cls))
 
-                    det.bbox.center.position.x = float((x1 + x2) / 2.0)
-                    det.bbox.center.position.y = float((y1 + y2) / 2.0)
-                    det.bbox.size_x = float(x2 - x1)
-                    det.bbox.size_y = float(y2 - y1)
+                det = Detection2D()
+                det.header = msg.header
 
-                    hyp = ObjectHypothesisWithPose()
-                    hyp.hypothesis.class_id = cls_name
-                    hyp.hypothesis.score = conf
-                    det.results.append(hyp)
+                det.bbox.center.position.x = float((x1 + x2) / 2.0)
+                det.bbox.center.position.y = float((y1 + y2) / 2.0)
+                det.bbox.size_x = float(x2 - x1)
+                det.bbox.size_y = float(y2 - y1)
 
-                    det_array.detections.append(det)
+                hyp = ObjectHypothesisWithPose()
+                hyp.hypothesis.class_id = cls_name
+                hyp.hypothesis.score = conf
+                det.results.append(hyp)
+
+                det_array.detections.append(det)
 
             self.detection_pub.publish(det_array)
 

@@ -261,18 +261,20 @@ public:
         : BT::StatefulActionNode(name, config) {}
     static BT::PortsList providedPorts() {
         return {
-            BT::InputPort<Pose>("from",    "Start waypoint (informational)"),
-            BT::InputPort<Pose>("to",      "Target waypoint"),
-            BT::InputPort<bool>("reverse", "If true, face opposite of target yaw (180 deg flip)")
+            BT::InputPort<Pose>("from",     "Start waypoint (informational)"),
+            BT::InputPort<Pose>("to",       "Target waypoint"),
+            BT::InputPort<bool>("reverse",  "If true, face opposite of target yaw (180 deg flip)"),
+            BT::InputPort<double>("duration", "Timed surge duration in seconds")
         };
     }
     BT::NodeStatus onStart()   override;
     BT::NodeStatus onRunning() override;
     void           onHalted()  override;
-private:
-    Pose target_;
+    private:
+    Pose   target_;
     double start_time_ = 0.0;
-};
+    double duration_   = 15.0;
+    };
 
 class NavigateAround : public BT::StatefulActionNode {
 public:
@@ -384,6 +386,89 @@ private:
     double duration_ = 2.0;
 };
 
+// ─── Consolidated Phase Nodes ───────────────────────────────────────────
+
+class ActionInitialize : public BT::StatefulActionNode {
+public:
+    ActionInitialize(const std::string& name, const BT::NodeConfig& config)
+        : BT::StatefulActionNode(name, config) {}
+    static BT::PortsList providedPorts() {
+        return { BT::InputPort<double>("target_depth", "Depth to dive to") };
+    }
+    BT::NodeStatus onStart() override;
+    BT::NodeStatus onRunning() override;
+    void onHalted() override;
+private:
+    enum class Phase { CHECK, DIVE };
+    Phase  phase_ = Phase::CHECK;
+    double target_depth_ = 1.5;
+};
+
+class ActionPassGate : public BT::StatefulActionNode {
+public:
+    ActionPassGate(const std::string& name, const BT::NodeConfig& config)
+        : BT::StatefulActionNode(name, config) {}
+    static BT::PortsList providedPorts() {
+        return {
+            BT::InputPort<double>("gate_depth", "Distance to drive after gate"),
+            BT::OutputPort<Pose>("entry_pose", "Saved pose for return")
+        };
+    }
+    BT::NodeStatus onStart() override;
+    BT::NodeStatus onRunning() override;
+    void onHalted() override;
+private:
+    enum class Phase { SEARCH, ALIGN, DRIVE };
+    Phase  phase_ = Phase::SEARCH;
+    double gate_depth_ = 6.0;
+    double start_time_ = 0.0;
+    double align_start_time_ = 0.0;
+    double accum_yaw_ = 0.0, prev_yaw_ = 0.0;
+    Pose   entry_pose_;
+};
+
+class ActionOrbitPole : public BT::StatefulActionNode {
+public:
+    ActionOrbitPole(const std::string& name, const BT::NodeConfig& config)
+        : BT::StatefulActionNode(name, config) {}
+    static BT::PortsList providedPorts() {
+        return { BT::InputPort<double>("radius", "Orbit radius in metres") };
+    }
+    BT::NodeStatus onStart() override;
+    BT::NodeStatus onRunning() override;
+    void onHalted() override;
+private:
+    enum class Phase { SEARCH, ALIGN, APPROACH, ORBIT_STEP_ALIGN, ORBIT_STEP_TURN, ORBIT_STEP_SURGE };
+    Phase  phase_ = Phase::SEARCH;
+    double radius_ = 2.0;
+    double accum_yaw_ = 0.0, prev_yaw_ = 0.0;
+    double start_time_ = 0.0, target_yaw_ = 0.0, locked_yaw_ = 0.0;
+    int    steps_completed_ = 0;
+};
+
+class ActionReturnHome : public BT::StatefulActionNode {
+public:
+    ActionReturnHome(const std::string& name, const BT::NodeConfig& config)
+        : BT::StatefulActionNode(name, config) {}
+    static BT::PortsList providedPorts() {
+        return {
+            BT::InputPort<Pose>("home_pose", "The T1 pose to return to"),
+            BT::InputPort<double>("transit_duration", "Blind surge time"),
+            BT::InputPort<double>("gate_depth", "Final pass distance")
+        };
+    }
+    BT::NodeStatus onStart() override;
+    BT::NodeStatus onRunning() override;
+    void onHalted() override;
+private:
+    enum class Phase { TRANSIT_TURN, TRANSIT_SURGE, SEARCH, ALIGN, DRIVE };
+    Phase  phase_ = Phase::TRANSIT_TURN;
+    Pose   home_pose_;
+    double transit_dur_ = 10.0, gate_depth_ = 4.0;
+    double start_time_ = 0.0, align_start_time_ = 0.0;
+    double accum_yaw_ = 0.0, prev_yaw_ = 0.0;
+};
+
 inline void registerAllNodes(BT::BehaviorTreeFactory& factory) {
     factory.registerNodeType<AllSystemsOK>("AllSystemsOK");
     factory.registerNodeType<SaveToBlackboard>("SaveToBlackboard");
@@ -398,4 +483,10 @@ inline void registerAllNodes(BT::BehaviorTreeFactory& factory) {
     factory.registerNodeType<MoveRelatively>("MoveRelatively");
     factory.registerNodeType<RelativeTurn>("RelativeTurn");
     factory.registerNodeType<StayStill>("StayStill");
+
+    // Consolidated nodes
+    factory.registerNodeType<ActionInitialize>("ActionInitialize");
+    factory.registerNodeType<ActionPassGate>("ActionPassGate");
+    factory.registerNodeType<ActionOrbitPole>("ActionOrbitPole");
+    factory.registerNodeType<ActionReturnHome>("ActionReturnHome");
 }

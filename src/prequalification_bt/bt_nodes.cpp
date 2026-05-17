@@ -227,8 +227,9 @@ void DriveThruGate::onHalted() {
 
 // ─── 7. NavigateTo ────────────────────────────────────────────────────────────
 BT::NodeStatus NavigateTo::onStart() {
-    auto to = getInput<Pose>("to");
+    auto to  = getInput<Pose>("to");
     auto rev = getInput<bool>("reverse");
+    auto dur = getInput<double>("duration");
     if (!to) throw BT::RuntimeError("NavigateTo: missing target Pose [to]");
     
     target_ = to.value();
@@ -237,11 +238,13 @@ BT::NodeStatus NavigateTo::onStart() {
         RCLCPP_INFO(getCtx(config())->node->get_logger(), "[NavigateTo] REVERSING direction for return.");
     }
     
+    duration_ = dur ? dur.value() : 20.0;
+    
     auto ctx = getCtx(config());
     start_time_ = 0.0;
     
-    RCLCPP_INFO(ctx->node->get_logger(), "[NavigateTo] Locked Return Heading: %.2f rad (%.1f deg)", 
-                target_.yaw, target_.yaw * 180.0 / M_PI);
+    RCLCPP_INFO(ctx->node->get_logger(), "[NavigateTo] Target Heading: %.2f rad (%.1f deg), Duration: %.1f s", 
+                target_.yaw, target_.yaw * 180.0 / M_PI, duration_);
     return BT::NodeStatus::RUNNING;
 }
 
@@ -263,7 +266,7 @@ BT::NodeStatus NavigateTo::onRunning() {
     }
 
     double elapsed = ctx->node->get_clock()->now().seconds() - start_time_;
-    if (elapsed >= 22.0) { // Increased to 22s to clear the gate area fully
+    if (elapsed >= duration_) { 
         ctx->stopMotion();
         return BT::NodeStatus::SUCCESS;
     }
@@ -553,3 +556,224 @@ void StayStill::onHalted() {
     auto ctx = getCtx(config());
     ctx->stopMotion();
 }
+
+// ─── Consolidated Action Implementations ──────────────────────────────────────
+
+// 1. ActionInitialize (Systems Check + Dive)
+BT::NodeStatus ActionInitialize::onStart() {
+    target_depth_ = getInput<double>("target_depth").value_or(1.5);
+    phase_ = Phase::CHECK;
+    return BT::NodeStatus::RUNNING;
+}
+
+BT::NodeStatus ActionInitialize::onRunning() {
+    auto ctx = getCtx(config());
+    rclcpp::spin_some(ctx->node);
+
+    if (phase_ == Phase::CHECK) {
+        if (!ctx->imu_received) {
+            RCLCPP_WARN_THROTTLE(ctx->node->get_logger(), *ctx->node->get_clock(), 2000, "[ActionInitialize] Waiting for IMU...");
+            return BT::NodeStatus::RUNNING;
+        }
+        phase_ = Phase::DIVE;
+        ctx->target_depth = target_depth_;
+        RCLCPP_INFO(ctx->node->get_logger(), "[ActionInitialize] Systems OK. Diving to %.2fm", target_depth_);
+    }
+
+    double current_z = ctx->getCurrentPose().z;
+    if (std::abs(target_depth_ - current_z) < 0.15) {
+        RCLCPP_INFO(ctx->node->get_logger(), "[ActionInitialize] Ready at %.2fm", current_z);
+        return BT::NodeStatus::SUCCESS;
+    }
+
+    ctx->publishToPico(0.0f, 0.0f, 0.0f, (float)target_depth_, 0);
+    return BT::NodeStatus::RUNNING;
+}
+
+void ActionInitialize::onHalted() { getCtx(config())->stopMotion(); }
+
+// 2. ActionPassGate (Search + Align + Drive)
+BT::NodeStatus ActionPassGate::onStart() {
+    gate_depth_ = getInput<double>("gate_depth").value_or(6.0);
+    phase_ = Phase::SEARCH;
+    auto ctx = getCtx(config());
+    accum_yaw_ = 0.0;
+    prev_yaw_ = ctx->getCurrentPose().yaw;
+    RCLCPP_INFO(ctx->node->get_logger(), "[ActionPassGate] Starting. Phase: SEARCH");
+    return BT::NodeStatus::RUNNING;
+}
+
+BT::NodeStatus ActionPassGate::onRunning() {
+    auto ctx = getCtx(config());
+    rclcpp::spin_some(ctx->node);
+    Pose cur = ctx->getCurrentPose();
+
+    double ox, oy, oz;
+    bool seen = ctx->getObjectPosition("GATE", ox, oy, oz);
+
+    if (phase_ == Phase::SEARCH) {
+        if (seen) {
+            phase_ = Phase::ALIGN;
+            align_start_time_ = 0.0;
+            RCLCPP_INFO(ctx->node->get_logger(), "[ActionPassGate] Gate seen. Phase: ALIGN");
+            return BT::NodeStatus::RUNNING;
+        }
+        double delta = std::abs(normalizeAngle(cur.yaw - prev_yaw_));
+        accum_yaw_ += delta;
+        prev_yaw_ = cur.yaw;
+        if (accum_yaw_ >= 2.0 * M_PI) return BT::NodeStatus::FAILURE;
+        ctx->publishToPico(0.5f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
+    } 
+    else if (phase_ == Phase::ALIGN) {
+        if (!seen) {
+            phase_ = Phase::SEARCH; // Re-search if lost
+            return BT::NodeStatus::RUNNING;
+        }
+        double norm_x = ox / std::max(oz, 0.5);
+        if (std::abs(norm_x) < 0.04) {
+            if (align_start_time_ == 0.0) align_start_time_ = ctx->node->get_clock()->now().seconds();
+            if (ctx->node->get_clock()->now().seconds() - align_start_time_ >= 1.0) {
+                phase_ = Phase::DRIVE;
+                start_time_ = ctx->node->get_clock()->now().seconds();
+                entry_pose_ = cur;
+                RCLCPP_INFO(ctx->node->get_logger(), "[ActionPassGate] Aligned. Phase: DRIVE (%.1fs surge)", (oz + gate_depth_) / 0.5);
+            }
+        } else {
+            align_start_time_ = 0.0;
+            ctx->publishToPico(-(float)norm_x * 0.8f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
+        }
+    } 
+    else if (phase_ == Phase::DRIVE) {
+        double elapsed = ctx->node->get_clock()->now().seconds() - start_time_;
+        if (elapsed >= (gate_depth_ + 2.0) / 0.5) { // Rough time estimate
+            setOutput("entry_pose", entry_pose_);
+            return BT::NodeStatus::SUCCESS;
+        }
+        double yaw_err = normalizeAngle(entry_pose_.yaw - cur.yaw);
+        ctx->publishToPico((float)yaw_err, 10.0f, 0.0f, (float)ctx->target_depth, 0);
+    }
+    return BT::NodeStatus::RUNNING;
+}
+
+void ActionPassGate::onHalted() { getCtx(config())->stopMotion(); }
+
+// 3. ActionOrbitPole (Search + Align + Approach + Orbit)
+BT::NodeStatus ActionOrbitPole::onStart() {
+    radius_ = getInput<double>("radius").value_or(2.0);
+    phase_ = Phase::SEARCH;
+    auto ctx = getCtx(config());
+    accum_yaw_ = 0.0;
+    prev_yaw_ = ctx->getCurrentPose().yaw;
+    steps_completed_ = 0;
+    RCLCPP_INFO(ctx->node->get_logger(), "[ActionOrbitPole] Starting. Phase: SEARCH");
+    return BT::NodeStatus::RUNNING;
+}
+
+BT::NodeStatus ActionOrbitPole::onRunning() {
+    auto ctx = getCtx(config());
+    rclcpp::spin_some(ctx->node);
+    Pose cur = ctx->getCurrentPose();
+    double ox, oy, oz;
+    bool seen = ctx->getObjectPosition("POLE", ox, oy, oz);
+
+    if (phase_ == Phase::SEARCH) {
+        if (seen) { phase_ = Phase::ALIGN; return BT::NodeStatus::RUNNING; }
+        double delta = std::abs(normalizeAngle(cur.yaw - prev_yaw_));
+        accum_yaw_ += delta;
+        prev_yaw_ = cur.yaw;
+        if (accum_yaw_ >= 2.0 * M_PI) return BT::NodeStatus::FAILURE;
+        ctx->publishToPico(0.5f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
+    }
+    else if (phase_ == Phase::ALIGN) {
+        if (!seen) { phase_ = Phase::SEARCH; return BT::NodeStatus::RUNNING; }
+        double norm_x = ox / std::max(oz, 0.5);
+        if (std::abs(norm_x) < 0.05) { phase_ = Phase::APPROACH; locked_yaw_ = cur.yaw; }
+        else ctx->publishToPico(-(float)norm_x * 1.5f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
+    }
+    else if (phase_ == Phase::APPROACH) {
+        if (seen && oz <= radius_) { phase_ = Phase::ORBIT_STEP_ALIGN; }
+        else {
+            double yaw_err = normalizeAngle(locked_yaw_ - cur.yaw);
+            ctx->publishToPico(2.0f * (float)yaw_err, 8.0f, 0.0f, (float)ctx->target_depth, 0);
+        }
+    }
+    else if (phase_ == Phase::ORBIT_STEP_ALIGN) {
+        if (steps_completed_ >= 8) return BT::NodeStatus::SUCCESS;
+        if (!seen) { ctx->publishToPico(0.4f, 0.0f, 0.0f, (float)ctx->target_depth, 0); }
+        else {
+            double norm_x = ox / std::max(oz, 0.5);
+            if (std::abs(norm_x) < 0.06) {
+                phase_ = Phase::ORBIT_STEP_TURN;
+                double correction = clampVal((radius_ - oz) * 0.5, -0.4, 0.4);
+                target_yaw_ = normalizeAngle(cur.yaw - (85.0 * M_PI / 180.0) - correction);
+            } else ctx->publishToPico(-(float)norm_x * 1.5f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
+        }
+    }
+    else if (phase_ == Phase::ORBIT_STEP_TURN) {
+        double yaw_err = normalizeAngle(target_yaw_ - cur.yaw);
+        if (std::abs(yaw_err) < 0.08) { phase_ = Phase::ORBIT_STEP_SURGE; start_time_ = ctx->node->get_clock()->now().seconds(); locked_yaw_ = cur.yaw; }
+        else ctx->publishToPico((float)yaw_err * 2.0f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
+    }
+    else if (phase_ == Phase::ORBIT_STEP_SURGE) {
+        if (ctx->node->get_clock()->now().seconds() - start_time_ >= 3.0) { phase_ = Phase::ORBIT_STEP_ALIGN; steps_completed_++; }
+        else ctx->publishToPico(normalizeAngle(locked_yaw_ - cur.yaw) * 2.0f, 10.0f, 0.0f, (float)ctx->target_depth, 0);
+    }
+    return BT::NodeStatus::RUNNING;
+}
+
+void ActionOrbitPole::onHalted() { getCtx(config())->stopMotion(); }
+
+// 4. ActionReturnHome (Transit + Search + Align + Drive)
+BT::NodeStatus ActionReturnHome::onStart() {
+    auto hp = getInput<Pose>("home_pose");
+    if (!hp) return BT::NodeStatus::FAILURE;
+    home_pose_ = hp.value();
+    home_pose_.yaw = normalizeAngle(home_pose_.yaw + M_PI);
+    transit_dur_ = getInput<double>("transit_duration").value_or(10.0);
+    gate_depth_ = getInput<double>("gate_depth").value_or(4.0);
+    phase_ = Phase::TRANSIT_TURN;
+    RCLCPP_INFO(getCtx(config())->node->get_logger(), "[ActionReturnHome] Starting. Phase: TRANSIT_TURN");
+    return BT::NodeStatus::RUNNING;
+}
+
+BT::NodeStatus ActionReturnHome::onRunning() {
+    auto ctx = getCtx(config());
+    rclcpp::spin_some(ctx->node);
+    Pose cur = ctx->getCurrentPose();
+
+    if (phase_ == Phase::TRANSIT_TURN) {
+        double yaw_err = normalizeAngle(home_pose_.yaw - cur.yaw);
+        if (std::abs(yaw_err) < 0.1) { phase_ = Phase::TRANSIT_SURGE; start_time_ = ctx->node->get_clock()->now().seconds(); }
+        else ctx->publishToPico((float)yaw_err * 2.0f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
+    }
+    else if (phase_ == Phase::TRANSIT_SURGE) {
+        if (ctx->node->get_clock()->now().seconds() - start_time_ >= transit_dur_) { phase_ = Phase::SEARCH; accum_yaw_ = 0.0; prev_yaw_ = cur.yaw; }
+        else ctx->publishToPico(normalizeAngle(home_pose_.yaw - cur.yaw) * 2.0f, 10.0f, 0.0f, (float)ctx->target_depth, 0);
+    }
+    else if (phase_ == Phase::SEARCH) {
+        double ox, oy, oz;
+        if (ctx->getObjectPosition("GATE", ox, oy, oz)) { phase_ = Phase::ALIGN; align_start_time_ = 0.0; }
+        else {
+            double delta = std::abs(normalizeAngle(cur.yaw - prev_yaw_));
+            accum_yaw_ += delta; prev_yaw_ = cur.yaw;
+            if (accum_yaw_ >= 2.0 * M_PI) return BT::NodeStatus::FAILURE;
+            ctx->publishToPico(0.5f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
+        }
+    }
+    else if (phase_ == Phase::ALIGN) {
+        double ox, oy, oz;
+        if (!ctx->getObjectPosition("GATE", ox, oy, oz)) { phase_ = Phase::SEARCH; return BT::NodeStatus::RUNNING; }
+        double norm_x = ox / std::max(oz, 0.5);
+        if (std::abs(norm_x) < 0.04) {
+            if (align_start_time_ == 0.0) align_start_time_ = ctx->node->get_clock()->now().seconds();
+            if (ctx->node->get_clock()->now().seconds() - align_start_time_ >= 1.0) { phase_ = Phase::DRIVE; start_time_ = ctx->node->get_clock()->now().seconds(); home_pose_ = cur; }
+        } else ctx->publishToPico(-(float)norm_x * 0.8f, 0.0f, 0.0f, (float)ctx->target_depth, 0);
+    }
+    else if (phase_ == Phase::DRIVE) {
+        if (ctx->node->get_clock()->now().seconds() - start_time_ >= (gate_depth_ + 2.0) / 0.5) return BT::NodeStatus::SUCCESS;
+        ctx->publishToPico(normalizeAngle(home_pose_.yaw - cur.yaw), 10.0f, 0.0f, (float)ctx->target_depth, 0);
+    }
+    return BT::NodeStatus::RUNNING;
+}
+
+void ActionReturnHome::onHalted() { getCtx(config())->stopMotion(); }

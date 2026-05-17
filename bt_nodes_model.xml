@@ -1,5 +1,20 @@
 <root BTCPP_format="4">
     <TreeNodesModel>
+        <Action ID="ActionInitialize">
+            <input_port name="target_depth" type="double">Depth to dive to</input_port>
+        </Action>
+        <Action ID="ActionOrbitPole">
+            <input_port name="radius" type="double">Orbit radius in metres</input_port>
+        </Action>
+        <Action ID="ActionPassGate">
+            <output_port name="entry_pose" type="Pose">Saved pose for return</output_port>
+            <input_port name="gate_depth" type="double">Distance to drive after gate</input_port>
+        </Action>
+        <Action ID="ActionReturnHome">
+            <input_port name="gate_depth" type="double">Final pass distance</input_port>
+            <input_port name="transit_duration" type="double">Blind surge time</input_port>
+            <input_port name="home_pose" type="Pose">The T1 pose to return to</input_port>
+        </Action>
         <Action ID="AlignWithObject">
             <input_port name="object" type="std::string">GATE or POLE</input_port>
         </Action>
@@ -31,6 +46,7 @@
             <input_port name="object" type="std::string">Object to orbit: POLE</input_port>
         </Action>
         <Action ID="NavigateTo">
+            <input_port name="duration" type="double">Timed surge duration in seconds</input_port>
             <input_port name="reverse" type="bool">If true, face opposite of target yaw (180 deg flip)</input_port>
             <input_port name="to" type="Pose">Target waypoint</input_port>
             <input_port name="from" type="Pose">Start waypoint (informational)</input_port>
