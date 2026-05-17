@@ -94,7 +94,7 @@ graph TD
 ---
 
 ## 4. The Behavior Tree (Logic Layer)
-The mission is defined in `src/prequalification_bt/prequalification.xml`.
+The mission is defined in `src/prequalification_bt/config/prequalification.xml`.
 
 ### Key Control Nodes:
 - **`Sequence` (➔)**: Runs children one-by-one. If one fails, the mission stops.
@@ -160,8 +160,8 @@ The BT sends a `custom_interfaces/msg/ToPico` message to the thruster controller
 To open the visualization tool with the correct model loaded, use this command:
 
 ```bash
-/home/farha/Downloads/Groot2-v1.9.0-x86_64.AppImage --file /home/farha/robosub/src/prequalification_bt/prequalification_groot.xml
+/home/farha/Downloads/Groot2-v1.9.0-x86_64.AppImage --file /home/farha/robosub/src/prequalification_bt/config/prequalification.xml
 ```
 
-*Note: Use the `prequalification_groot.xml` file because it contains both the tree and the node definitions (palette) in one file.*
+*Note: Use the `prequalification.xml` file because it contains both the tree and the node definitions (palette) in one file.*
 alette) in one file.*

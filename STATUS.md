@@ -25,6 +25,10 @@
 - **Return Trip Fine-Tuning**:
     - Increased the final gate pass surge from **4.0m to 7.0m** to ensure the robot completely clears the gate structure before the final stop.
 
+- **Workspace Reorganization**:
+    - Moved all Behavior Tree XML files into a dedicated `src/prequalification_bt/config/` directory for better organization.
+    - Cleaned up the root directory and consolidated visualization logic into `prequalification.xml`.
+
 ## 2. Current Configuration
 - **Architecture**: Phase-Oriented Behavior Tree (7 steps total).
 - **Target Depth**: 1.5m
@@ -39,4 +43,5 @@
 
 ## 4. How to Resume
 Run: `ros2 run prequalification_bt prequalification`
-Check: `src/prequalification_bt/bt_nodes.cpp` for core logic and `src/prequalification_bt/prequalification.xml` for the mission sequence.
+Check: `src/prequalification_bt/bt_nodes.cpp` for core logic and `src/prequalification_bt/config/prequalification.xml` for the mission sequence.
+Visualizer: `/home/farha/Downloads/Groot2-v1.9.0-x86_64.AppImage --file /home/farha/robosub/src/prequalification_bt/config/prequalification.xml`
