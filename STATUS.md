@@ -9,25 +9,20 @@
     - Implemented a robust **8-step tangential orbit** in the `NavigateAround` node.
     - Added **Active Radial Correction**: Robot dynamically adjusts its turn angle (base 90°) based on distance to the pole (2.0m target) to prevent collisions.
     - Standardized on **Anti-clockwise searching** to re-acquire the pole after each tangential surge.
-- **Return Trip Optimization**:
-    - Implemented a **Two-Stage Return**: 
-        1. **Blind Transit**: 10s timed surge using reversed gate heading (`T1`) to close the distance.
-        2. **Visual Lock**: Search and precise alignment once closer to the gate.
-    - Tuned final gate pass surge to **4.0m** to ensure the robot stops safely before the pool wall.
-- **Infrastructure**:
-    - Performed a clean rebuild and synced YOLO models between `src` and `install`.
-    - Configured Git LFS and created a backup repository at `https://github.com/farha215/prequal-task.git`.
-- **Behavior Tree Optimization**:
-    - Refactored the granular BT structure into a **Phase-Oriented Architecture**.
-    - Consolidated ~18 nodes into 4 high-level "Smart Actions": `ActionInitialize`, `ActionPassGate`, `ActionOrbitPole`, and `ActionReturnHome`.
-    - Moved search and alignment logic into C++ node internal states for better robustness and visual simplicity.
-    - Updated `bt_nodes_model.xml` and synced `prequalification_groot.xml` for seamless visualization in Groot2.
+- **Behavior Tree Optimization (Phase-Oriented Architecture)**:
+    - Refactored the granular BT structure from ~18 individual nodes into **4 high-level "Smart Actions"**:
+        1. `ActionInitialize`: Unified systems check and diving.
+        2. `ActionPassGate`: Integrated searching, alignment, and stabilized surge.
+        3. `ActionOrbitPole`: Combined search, approach, and radial-corrected orbit.
+        4. `ActionReturnHome`: Sequenced blind transit and final visual gate pass.
+    - Moved complex search/align state-machine logic into C++ for better robustness and visual simplicity.
 - **Return Trip Fine-Tuning**:
-    - Increased the final gate pass surge from **4.0m to 7.0m** to ensure the robot completely clears the gate structure before the final stop.
-
-- **Workspace Reorganization**:
-    - Moved all Behavior Tree XML files into a dedicated `src/prequalification_bt/config/` directory for better organization.
-    - Cleaned up the root directory and consolidated visualization logic into `prequalification.xml`.
+    - Implemented a **Two-Stage Return**: 10s blind transit followed by visual lock.
+    - Increased final gate pass surge from **4.0m to 7.0m** (~18s total) to ensure the robot completely clears the gate structure.
+- **Workspace Organization & Infrastructure**:
+    - Reorganized mission files into a dedicated `src/prequalification_bt/config/` directory.
+    - Consolidated Groot2 visualization data into a single modern XML format.
+    - Synchronized all local changes with the GitHub repository (`prequal-task`).
 
 ## 2. Current Configuration
 - **Architecture**: Phase-Oriented Behavior Tree (7 steps total).
@@ -42,6 +37,8 @@
 - **YOLO Robustness**: Test the system with varying ambient lighting to verify YOLO confidence stability.
 
 ## 4. How to Resume
-Run: `ros2 run prequalification_bt prequalification`
-Check: `src/prequalification_bt/bt_nodes.cpp` for core logic and `src/prequalification_bt/config/prequalification.xml` for the mission sequence.
-Visualizer: `/home/farha/Downloads/Groot2-v1.9.0-x86_64.AppImage --file /home/farha/robosub/src/prequalification_bt/config/prequalification.xml`
+- **Build**: `colcon build --packages-select prequalification_bt`
+- **Execute**: `ros2 run prequalification_bt prequalification`
+- **Source Code**: `src/prequalification_bt/bt_nodes.cpp`
+- **Mission Logic**: `src/prequalification_bt/config/prequalification.xml`
+- **Visualizer**: `/home/farha/Downloads/Groot2-v1.9.0-x86_64.AppImage --file src/prequalification_bt/config/prequalification.xml`
