@@ -1,6 +1,5 @@
 # Hydrogen AUV - RoboSub 2026
 
-![RoboSub](https://img.shields.io/badge/RoboSub-2026-blue)
 ![ROS 2](https://img.shields.io/badge/ROS%202-Humble-orange)
 ![Ignition](https://img.shields.io/badge/Ignition-Fortress-red)
 
