@@ -1,40 +1,36 @@
-<root BTCPP_format="4">
+<root BTCPP_format="4" main_tree_to_execute="PreQualification_Task">
 
-    <!-- Behavior Tree Definition -->
+    <!-- Behavior Tree Definition (Integrated StayStill Version) -->
     <BehaviorTree ID="PreQualification_Task">
         <Sequence>
+            <!-- 0. SYSTEMS CHECK -->
+            <AllSystemsOK name="check_systems"/>
 
-            <!-- 1. INITIALIZE: Wait for systems & Dive to depth -->
+            <!-- 1. INITIALIZE (StayStill Integrated) -->
             <ActionInitialize name="initialize" 
                               target_depth="1.5"/>
 
-            <!-- 2. GATE MISSION: Search, Align, and Drive through -->
+            <!-- 2. GATE MISSION (StayStill Integrated) -->
             <ActionPassGate name="gate_mission" 
                             gate_depth="6.0" 
                             entry_pose="{T1}"/>
 
-            <StayStill name="post_gate_pause" duration="3.0"/>
-
-            <!-- 3. POLE MISSION: Search, Align, Approach, and Orbit -->
+            <!-- 3. POLE MISSION (StayStill Integrated) -->
             <ActionOrbitPole name="pole_mission" 
                              radius="2.0"/>
             
-            <StayStill name="pre_return_pause" duration="3.0"/>
-
-            <!-- 4. RETURN HOME: Blind transit, Search, and Final gate pass -->
+            <!-- 4. RETURN HOME (StayStill Integrated) -->
             <ActionReturnHome name="return_mission" 
                               home_pose="{T1}" 
                               transit_duration="10.0" 
                               gate_depth="7.0"/>
-
-            <!-- 5. FINISH -->
-            <StayStill name="final_stop" duration="3.0"/>
 
         </Sequence>
     </BehaviorTree>
 
     <!-- Node Models for Groot -->
     <TreeNodesModel>
+        <Condition ID="AllSystemsOK"/>
         <Action ID="ActionInitialize">
             <input_port name="target_depth" type="double">Depth to dive to</input_port>
         </Action>

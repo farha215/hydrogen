@@ -66,25 +66,25 @@
   gz_type_name: "ignition.msgs.Image"
   direction: "GZ_TO_ROS"
 
-#down camera
+#down camera (Disabled to reduce lag)
 
-- ros_topic_name: "/camera/depth_image_raw/down"
-  gz_topic_name: "/zed_camera_down_link/depth_image"
-  ros_type_name: "sensor_msgs/msg/Image"
-  gz_type_name: "ignition.msgs.Image"
-  direction: "GZ_TO_ROS"
+#- ros_topic_name: "/camera/depth_image_raw/down"
+#  gz_topic_name: "/zed_camera_down_link/depth_image"
+#  ros_type_name: "sensor_msgs/msg/Image"
+#  gz_type_name: "ignition.msgs.Image"
+#  direction: "GZ_TO_ROS"
 
-- ros_topic_name: "/camera_info_down"
-  gz_topic_name: "/zed_camera_down_link/camera_info"
-  ros_type_name: "sensor_msgs/msg/CameraInfo"
-  gz_type_name: "ignition.msgs.CameraInfo"
-  direction: "GZ_TO_ROS"
+#- ros_topic_name: "/camera_info_down"
+#  gz_topic_name: "/zed_camera_down_link/camera_info"
+#  ros_type_name: "sensor_msgs/msg/CameraInfo"
+#  gz_type_name: "ignition.msgs.CameraInfo"
+#  direction: "GZ_TO_ROS"
 
-- ros_topic_name: "/camera/RGB_image_raw/down"
-  gz_topic_name: "/zed_camera_down_link/image"
-  ros_type_name: "sensor_msgs/msg/Image"
-  gz_type_name: "ignition.msgs.Image"
-  direction: "GZ_TO_ROS"
+#- ros_topic_name: "/camera/RGB_image_raw/down"
+#  gz_topic_name: "/zed_camera_down_link/image"
+#  ros_type_name: "sensor_msgs/msg/Image"
+#  gz_type_name: "ignition.msgs.Image"
+#  direction: "GZ_TO_ROS"
 
 #altimeter
 - ros_topic_name: /altimeter

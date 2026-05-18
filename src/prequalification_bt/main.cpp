@@ -1,5 +1,6 @@
 #include "bt_nodes.h"
 #include <behaviortree_cpp/xml_parsing.h>
+#include <behaviortree_cpp/loggers/groot2_publisher.h>
 #include <rclcpp/rclcpp.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
@@ -86,6 +87,10 @@ int main(int argc, char** argv) {
     RCLCPP_INFO(node->get_logger(), "Loading behaviour tree: %s", xml_path.c_str());
 
     auto tree = factory.createTreeFromFile(xml_path);
+
+    // ── Groot2 Publisher (for real-time monitoring) ───────────────────────────
+    RCLCPP_INFO(node->get_logger(), "Starting Groot2 Publisher on port 1667...");
+    BT::Groot2Publisher publisher(tree, 1667);
 
     // ── Inject shared context into the blackboard ──────────────────────────────
     tree.rootBlackboard()->set("robot_context", ctx);
