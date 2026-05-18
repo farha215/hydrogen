@@ -69,4 +69,4 @@ ros2 run prequalification_bt prequalification
 See [STATUS.md](STATUS.md) for the latest updates on detection pipelines, mission logic, and simulation optimizations.
 
 ---
-© 2026 Hydrogen AUV Team.
+
