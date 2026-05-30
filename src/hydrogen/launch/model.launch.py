@@ -134,14 +134,6 @@ def generate_launch_description():
     	parameters=[{'use_sim_time': True}],
     )
 
-    vision_fusion_node = Node(
-        package='hydrogen',
-        executable='vision_fusion_node',
-        name='vision_fusion_node',
-        output='screen',
-        parameters=[{'use_sim_time': True}],
-    )
-
     # ---------------- Launch Description ----------------
     ld = LaunchDescription()
 
@@ -161,7 +153,6 @@ def generate_launch_description():
     ld.add_action(ros_gz_bridge)
     ld.add_action(thruster_allocator)
     ld.add_action(pico_controller)
-    ld.add_action(vision_fusion_node)
 
 
     return ld

@@ -1,53 +1,64 @@
 <root BTCPP_format="4" main_tree_to_execute="PreQualification_Task">
 
-    <!-- Behavior Tree Definition (Integrated StayStill Version) -->
     <BehaviorTree ID="PreQualification_Task">
-        <Sequence>
+        <Sequence name="main_mission">
             <!-- 0. SYSTEMS CHECK -->
             <AllSystemsOK name="check_systems"/>
 
-            <!-- 1. INITIALIZE (StayStill Integrated) -->
-            <ActionInitialize name="initialize" 
-                              target_depth="1.5"/>
+            <!-- 1. INITIALIZE -->
+            <DiveToDepth target_depth="1.5" staystill="2.0"/>
 
-            <!-- 2. GATE MISSION (StayStill Integrated) -->
-            <ActionPassGate name="gate_mission" 
-                            gate_depth="6.0" 
-                            entry_pose="{T1}"/>
+            <!-- 2. GATE MISSION -->
+            <Fallback name="find_gate">
+                <IsObjectSeen object="GATE"/>
+                <Do360Turn success_when_seen="GATE"/>
+            </Fallback>
+            <DriveThruGate gate_depth="6.0" entry_pose="{T1}" staystill="3.0"/>
 
-            <!-- 3. POLE MISSION (StayStill Integrated) -->
-            <ActionOrbitPole name="pole_mission" 
-                             radius="2.0"/>
+            <!-- 3. POLE MISSION -->
+            <Fallback name="find_pole">
+                <IsObjectSeen object="POLE"/>
+                <Do360Turn success_when_seen="POLE"/>
+            </Fallback>
+            <OrbitPole object="POLE" threshold="1.5" staystill="3.0" surge_duration="4.0"/>
             
-            <!-- 4. RETURN HOME (StayStill Integrated) -->
-            <ActionReturnHome name="return_mission" 
-                              home_pose="{T1}" 
-                              transit_duration="10.0" 
-                              gate_depth="7.0"/>
-
+            <!-- 4. RETURN HOME -->
+            <NavigateTo to="{T1}" duration="10.0" reverse="true"/>
+            <Fallback name="find_gate_home">
+                <IsObjectSeen object="GATE"/>
+                <Do360Turn success_when_seen="GATE"/>
+            </Fallback>
+            <DriveThruGate gate_depth="4.0" staystill="3.0"/>
         </Sequence>
     </BehaviorTree>
 
-    <!-- Node Models for Groot -->
     <TreeNodesModel>
         <Condition ID="AllSystemsOK"/>
-        <Action ID="ActionInitialize">
+        <Condition ID="IsObjectSeen">
+            <input_port name="object" type="std::string">GATE or POLE</input_port>
+        </Condition>
+        <Action ID="DiveToDepth">
             <input_port name="target_depth" type="double">Depth to dive to</input_port>
+            <input_port name="staystill" type="double" default="0.0">Seconds to stay still after</input_port>
         </Action>
-        <Action ID="ActionPassGate">
+        <Action ID="Do360Turn">
+            <input_port name="success_when_seen" type="std::string">Stop when this is seen</input_port>
+        </Action>
+        <Action ID="DriveThruGate">
             <input_port name="gate_depth" type="double">Distance to drive after gate</input_port>
+            <input_port name="staystill" type="double" default="0.0">Seconds to stay still after</input_port>
             <output_port name="entry_pose" type="Pose">Saved pose for return</output_port>
         </Action>
-        <Action ID="ActionOrbitPole">
-            <input_port name="radius" type="double">Orbit radius in metres</input_port>
+        <Action ID="OrbitPole">
+            <input_port name="object" type="std::string">Object to orbit</input_port>
+            <input_port name="threshold" type="double">Orbit radius</input_port>
+            <input_port name="staystill" type="double" default="0.0">Seconds to stay still after</input_port>
+            <input_port name="surge_duration" type="double" default="4.0">Time to surge after tangent</input_port>
         </Action>
-        <Action ID="ActionReturnHome">
-            <input_port name="home_pose" type="Pose">The T1 pose to return to</input_port>
-            <input_port name="transit_duration" type="double">Blind surge time</input_port>
-            <input_port name="gate_depth" type="double">Final pass distance</input_port>
-        </Action>
-        <Action ID="StayStill">
-            <input_port name="duration" type="double">Seconds to stay still</input_port>
+        <Action ID="NavigateTo">
+            <input_port name="to" type="Pose">Target pose</input_port>
+            <input_port name="duration" type="double">Time to surge</input_port>
+            <input_port name="reverse" type="bool" default="false">Flip heading by 180 deg</input_port>
         </Action>
     </TreeNodesModel>
 

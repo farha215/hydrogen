@@ -1,28 +1,33 @@
-# RoboSub Project Status - May 18, 2026
+# RoboSub Project Status - May 31, 2026 (Pre-Restart)
 
-## Overview
-The project has undergone a significant refactor to transition from an experimental codebase to a consolidated, mission-oriented architecture. The system is now centered around a phase-oriented Behavior Tree for pre-qualification, supported by a high-efficiency vision fusion pipeline and a robust PID-based controller.
+## 🎯 Current Mission State: Pre-Qualification
+The workspace has been fully reset to the `master` branch and optimized for testing the pre-qualification behavior tree.
 
-## Accomplishments
-- **Consolidated Vision Pipeline**: Replaced fragmented YOLO and Depth nodes with a single `VisionFusionNode`. This node performs inference and 3D projection at 15Hz, significantly reducing CPU and memory overhead.
-- **Phase-Oriented Behavior Tree**: Refactored mission logic into high-level "Smart Actions" (`ActionInitialize`, `ActionPassGate`, `ActionOrbitPole`, `ActionReturnHome`). This simplifies the mission XML and improves error handling.
-- **Optimized Control Loop**: The `PicoController` now manages 6-DOF PIDs with built-in stale-input safety checks and integral anti-windup.
-- **Simulation Stability**: Disabled high-bandwidth PointCloud2 and secondary camera topics to maintain a stable Real-Time Factor (RTF) in Gazebo.
-- **Codebase Cleanup**: Removed legacy backup files and redundant scripts. Improved documentation and commenting across core nodes for GitHub readiness.
+### ✅ Recent Accomplishments (This Session)
+- **Anti-Cheating Drive Logic**: Refactored `ActionPassGate` and `ActionReturnHome` to use real camera depth (`oz`) for calculating surge durations. The robot no longer relies on hardcoded timers for gate clearance.
+- **Alignment Optimization**: 
+    - Standardized centering gains to **2.0** for both GATE and POLE.
+    - Reduced stabilization wait time from **1.0s to 0.5s** for snappier transitions.
+    - Added terminal feedback logs for alignment phase transitions.
+- **Blackboard Safety Fix**: Removed fictional seeding of `T1` and `T2` in `main.cpp`. The return-home staging point is now derived purely from real-time detections.
+- **Vision Synchronization**: 
+    - `vision_fusion_node.py` is configured for `prequal.pt`.
+    - BT logic is now case-insensitive and mapped to "GATE" and "POLE" labels.
+    - OpenCV debug window is active; verbose terminal logging is silenced.
+- **Build Verification**: Clean `colcon build` of all packages (`custom_interfaces`, `hydrogen`, `control_system`, `prequalification_bt`) is verified.
 
-## Current System Configuration
-- **Autonomous Mission**: 7-phase Behavior Tree sequence.
-- **Target Depth**: 1.5m (Stabilized).
-- **Object Detection**: ML-based YOLO detection with 3D Depth Fusion.
-- **Orbit Strategy**: 8-step tangential surge orbit (radius 2.0m).
-- **Return Logic**: 10.0m surge extension to clear the gate on the return trip.
+### ⚠️ Pending Hardware Issue
+- **GPU Visibility**: The OS currently cannot see the NVIDIA discrete GPU (Intel iGPU is active). 
+- **Action Item**: Restart and switch BIOS/MUX to "Discrete Graphics" or disable "Hybrid Mode" in Lenovo Vantage.
 
-## Next Steps
-- **End-to-End Validation**: Execute a full mission run in the `buoyant_pool` simulation to verify the latest BT optimizations.
-- **Parameter Tuning**: Fine-tune PID gains for the physical AUV hardware if applicable.
-- **Extended Missions**: Begin developing additional BT nodes for competition-specific tasks (e.g., Buoy hit, Octagon surfacing).
+### 🚀 Launch Commands (Post-Restart)
+```bash
+# Terminal 1: Simulation
+ros2 launch hydrogen model.launch.py
 
-## Quick Start
-- **Build**: `colcon build --packages-select prequalification_bt custom_interfaces hydrogen control_system`
-- **Launch Simulation**: `ros2 launch hydrogen model.launch.py`
-- **Run Mission**: `ros2 run prequalification_bt prequalification`
+# Terminal 2: Perception
+ros2 run hydrogen vision_fusion_node.py
+
+# Terminal 3: Mission logic
+ros2 run prequalification_bt prequalification
+```

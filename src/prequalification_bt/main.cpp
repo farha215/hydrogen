@@ -95,16 +95,6 @@ int main(int argc, char** argv) {
     // ── Inject shared context into the blackboard ──────────────────────────────
     tree.rootBlackboard()->set("robot_context", ctx);
 
-    // ── Pre-set waypoints (replace with measured field coordinates) ───────────
-    // Note: Waypoints like T1 are saved dynamically by the behavior tree nodes at runtime.
-    // T1: staging point between gate and pole (through the gate)
-    // T2: exit waypoint on the far side (back through the gate toward home)
-    Pose t1, t2;
-    t1.x = 5.0;  t1.y = 0.0;  t1.z = 2.5;  t1.yaw = 0.0;
-    t2.x = 1.5;  t2.y = 0.0;  t2.z = 2.5;  t2.yaw = 0.0;
-    tree.rootBlackboard()->set("T1", t1);
-    tree.rootBlackboard()->set("T2", t2);
-
     // ── Seed callbacks before first tick ──────────────────────────────────────
     rclcpp::spin_some(node);
 

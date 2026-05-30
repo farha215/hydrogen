@@ -78,7 +78,7 @@ class VisionFusionNode(Node):
         depth_img = self.bridge.imgmsg_to_cv2(depth_msg, desired_encoding='32FC1')
 
         # 2. YOLO Inference
-        results = self.model(cv_image, verbose=False)
+        results = self.model(cv_image, verbose=False, show=False)
 
         # 3. Detection Processing
         out = Detection3DArray()
@@ -137,6 +137,16 @@ class VisionFusionNode(Node):
 
                 out.detections.append(det3d)
 
+                # --- 6. Visualization ---
+                label = f"{hyp3d.hypothesis.class_id}: {z:.2f}m"
+                cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                cv2.putText(cv_image, label, (int(x1), int(y1) - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+        # Show visualization window
+        cv2.imshow("Vision Detections", cv_image)
+        cv2.waitKey(1)
+
         self.pub.publish(out)
 
 def main(args=None):
@@ -147,6 +157,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        cv2.destroyAllWindows()
         node.destroy_node()
         rclpy.shutdown()
 

@@ -172,12 +172,15 @@ public:
 class DiveToDepth : public BT::StatefulActionNode {
 public:
     DiveToDepth(const std::string& name, const BT::NodeConfig& config) : BT::StatefulActionNode(name, config) {}
-    static BT::PortsList providedPorts() { return { BT::InputPort<double>("target_depth") }; }
+    static BT::PortsList providedPorts() { return { BT::InputPort<double>("target_depth"), BT::InputPort<double>("staystill") }; }
     BT::NodeStatus onStart() override;
     BT::NodeStatus onRunning() override;
     void onHalted() override;
 private:
     double target_z_ = 0.0, depth_tolerance_ = 0.15;
+    double staystill_ = 0.0;
+    std::chrono::steady_clock::time_point stay_still_start_;
+    bool in_stay_still_ = false;
 };
 
 class IsObjectSeen : public BT::ConditionNode {
@@ -203,16 +206,18 @@ class DriveThruGate : public BT::StatefulActionNode {
 public:
     DriveThruGate(const std::string& name, const BT::NodeConfig& config) : BT::StatefulActionNode(name, config) {}
     static BT::PortsList providedPorts() {
-        return { BT::InputPort<double>("gate_depth"), BT::OutputPort<Pose>("entry_pose") };
+        return { BT::InputPort<double>("gate_depth"), BT::InputPort<double>("staystill"), BT::OutputPort<Pose>("entry_pose") };
     }
     BT::NodeStatus onStart() override;
     BT::NodeStatus onRunning() override;
     void onHalted() override;
 private:
-    enum class Phase { ALIGN, DRIVE };
+    enum class Phase { ALIGN, DRIVE, STAY_STILL };
     Phase phase_ = Phase::ALIGN;
     Pose entry_pose_;
     double gate_depth_ = 6.0, start_time_ = 0.0, align_start_time_ = 0.0, gate_drive_time_ = 0.0;
+    double staystill_ = 0.0;
+    std::chrono::steady_clock::time_point stay_still_start_;
 };
 
 class NavigateTo : public BT::StatefulActionNode {
@@ -229,94 +234,26 @@ private:
     double start_time_ = 0.0, duration_ = 15.0;
 };
 
-class NavigateAround : public BT::StatefulActionNode {
+class OrbitPole : public BT::StatefulActionNode {
 public:
-    NavigateAround(const std::string& name, const BT::NodeConfig& config) : BT::StatefulActionNode(name, config) {}
+    OrbitPole(const std::string& name, const BT::NodeConfig& config) : BT::StatefulActionNode(name, config) {}
     static BT::PortsList providedPorts() {
-        return { BT::InputPort<std::string>("object"), BT::InputPort<double>("threshold") };
+        return { BT::InputPort<std::string>("object"), 
+                 BT::InputPort<double>("threshold"), 
+                 BT::InputPort<double>("staystill"),
+                 BT::InputPort<double>("surge_duration") };
     }
     BT::NodeStatus onStart() override;
     BT::NodeStatus onRunning() override;
     void onHalted() override;
 private:
-    enum class Phase { ALIGN, TURN, SURGE };
+    enum class Phase { ALIGN, TURN, SURGE, STAY_STILL };
     Phase phase_ = Phase::ALIGN;
     std::string target_object_;
-    double threshold_ = 1.5, target_yaw_ = 0.0, locked_yaw_ = 0.0, start_time_ = 0.0, surge_duration_ = 2.5;
+    double threshold_ = 1.5, target_yaw_ = 0.0, locked_yaw_ = 0.0, start_time_ = 0.0, surge_duration_ = 4.0;
     int steps_completed_ = 0;
-};
-
-class StayStill : public BT::StatefulActionNode {
-public:
-    StayStill(const std::string& name, const BT::NodeConfig& config) : BT::StatefulActionNode(name, config) {}
-    static BT::PortsList providedPorts() { return { BT::InputPort<double>("duration") }; }
-    BT::NodeStatus onStart() override;
-    BT::NodeStatus onRunning() override;
-    void onHalted() override;
-private:
-    std::chrono::steady_clock::time_point start_time_;
-    double duration_ = 2.0;
-};
-
-// ─── High-Level Action Nodes (Phase-Oriented) ───────────────────────────
-
-class ActionInitialize : public BT::StatefulActionNode {
-public:
-    ActionInitialize(const std::string& name, const BT::NodeConfig& config) : BT::StatefulActionNode(name, config) {}
-    static BT::PortsList providedPorts() { return { BT::InputPort<double>("target_depth") }; }
-    BT::NodeStatus onStart() override;
-    BT::NodeStatus onRunning() override;
-    void onHalted() override;
-private:
-    enum class Phase { DIVE, STAY_STILL };
-    Phase phase_ = Phase::DIVE;
-    double target_depth_ = 1.5, start_time_ = 0.0;
-};
-
-class ActionPassGate : public BT::StatefulActionNode {
-public:
-    ActionPassGate(const std::string& name, const BT::NodeConfig& config) : BT::StatefulActionNode(name, config) {}
-    static BT::PortsList providedPorts() {
-        return { BT::InputPort<double>("gate_depth"), BT::OutputPort<Pose>("entry_pose") };
-    }
-    BT::NodeStatus onStart() override;
-    BT::NodeStatus onRunning() override;
-    void onHalted() override;
-private:
-    enum class Phase { SEARCH, ALIGN, DRIVE, STAY_STILL };
-    Phase phase_ = Phase::SEARCH;
-    double gate_depth_ = 6.0, start_time_ = 0.0, align_start_time_ = 0.0, accum_yaw_ = 0.0, prev_yaw_ = 0.0;
-    Pose entry_pose_;
-};
-
-class ActionOrbitPole : public BT::StatefulActionNode {
-public:
-    ActionOrbitPole(const std::string& name, const BT::NodeConfig& config) : BT::StatefulActionNode(name, config) {}
-    static BT::PortsList providedPorts() { return { BT::InputPort<double>("radius") }; }
-    BT::NodeStatus onStart() override;
-    BT::NodeStatus onRunning() override;
-    void onHalted() override;
-private:
-    enum class Phase { SEARCH, ALIGN, APPROACH, ORBIT_STEP_ALIGN, ORBIT_STEP_TURN, ORBIT_STEP_SURGE, STAY_STILL };
-    Phase phase_ = Phase::SEARCH;
-    double radius_ = 2.0, accum_yaw_ = 0.0, prev_yaw_ = 0.0, start_time_ = 0.0, target_yaw_ = 0.0, locked_yaw_ = 0.0;
-    int steps_completed_ = 0;
-};
-
-class ActionReturnHome : public BT::StatefulActionNode {
-public:
-    ActionReturnHome(const std::string& name, const BT::NodeConfig& config) : BT::StatefulActionNode(name, config) {}
-    static BT::PortsList providedPorts() {
-        return { BT::InputPort<Pose>("home_pose"), BT::InputPort<double>("transit_duration"), BT::InputPort<double>("gate_depth") };
-    }
-    BT::NodeStatus onStart() override;
-    BT::NodeStatus onRunning() override;
-    void onHalted() override;
-private:
-    enum class Phase { TRANSIT_TURN, TRANSIT_SURGE, SEARCH, ALIGN, DRIVE, STAY_STILL };
-    Phase phase_ = Phase::TRANSIT_TURN;
-    Pose home_pose_;
-    double transit_dur_ = 10.0, gate_depth_ = 4.0, start_time_ = 0.0, align_start_time_ = 0.0, accum_yaw_ = 0.0, prev_yaw_ = 0.0;
+    double staystill_ = 0.0;
+    std::chrono::steady_clock::time_point stay_still_start_;
 };
 
 inline void registerAllNodes(BT::BehaviorTreeFactory& factory) {
@@ -327,10 +264,5 @@ inline void registerAllNodes(BT::BehaviorTreeFactory& factory) {
     factory.registerNodeType<Do360Turn>("Do360Turn");
     factory.registerNodeType<DriveThruGate>("DriveThruGate");
     factory.registerNodeType<NavigateTo>("NavigateTo");
-    factory.registerNodeType<NavigateAround>("NavigateAround");
-    factory.registerNodeType<StayStill>("StayStill");
-    factory.registerNodeType<ActionInitialize>("ActionInitialize");
-    factory.registerNodeType<ActionPassGate>("ActionPassGate");
-    factory.registerNodeType<ActionOrbitPole>("ActionOrbitPole");
-    factory.registerNodeType<ActionReturnHome>("ActionReturnHome");
+    factory.registerNodeType<OrbitPole>("OrbitPole");
 }
