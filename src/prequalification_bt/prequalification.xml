@@ -20,7 +20,7 @@
                 <IsObjectSeen object="POLE"/>
                 <Do360Turn success_when_seen="POLE"/>
             </Fallback>
-            <OrbitPole object="POLE" threshold="1.5" staystill="3.0" surge_duration="4.0"/>
+            <OrbitPole object="POLE" threshold="1.5" staystill="3.0" surge_duration="2.5"/>
             
             <!-- 4. RETURN HOME -->
             <NavigateTo to="{T1}" duration="10.0" reverse="true"/>

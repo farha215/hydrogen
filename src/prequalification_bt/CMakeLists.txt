@@ -8,7 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(ament_cmake      REQUIRED)
 find_package(rclcpp           REQUIRED)
 find_package(geometry_msgs    REQUIRED)
-find_package(nav_msgs         REQUIRED)
 find_package(sensor_msgs      REQUIRED)
 find_package(std_msgs         REQUIRED)
 find_package(vision_msgs      REQUIRED)
@@ -32,7 +31,6 @@ target_include_directories(prequalification PRIVATE
 ament_target_dependencies(prequalification
     rclcpp
     geometry_msgs
-    nav_msgs
     sensor_msgs
     std_msgs
     vision_msgs
@@ -52,9 +50,7 @@ install(TARGETS prequalification
 
 # XML tree file installed to share/ so ament_index_cpp can locate it at runtime
 install(FILES 
-    config/prequalification.xml
-    config/prequalification_groot.xml
-    config/bt_nodes_model.xml
+    prequalification.xml
     DESTINATION share/${PROJECT_NAME}
 )
 

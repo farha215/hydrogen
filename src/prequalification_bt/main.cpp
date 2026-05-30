@@ -1,3 +1,9 @@
+/**
+ * @file main.cpp
+ * @brief Main entry point for the pre-qualification behavior tree mission.
+ * @license Apache-2.0
+ */
+
 #include "bt_nodes.h"
 #include <behaviortree_cpp/xml_parsing.h>
 #include <behaviortree_cpp/loggers/groot2_publisher.h>
@@ -8,27 +14,21 @@
 #include <memory>
 #include <string>
 #include <thread>
-
 #include <fstream>
 
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
 
-    // ── ROS2 node ──────────────────────────────────────────────────────────────
     auto node = std::make_shared<rclcpp::Node>("prequalification_bt");
 
-    // ── Shared robot context ───────────────────────────────────────────────────
+    // --- Shared robot context -----------------------------------------------
     auto ctx       = std::make_shared<RobotContext>();
     ctx->node      = node;
 
     // Actuator publishers
-    ctx->cmd_vel_pub =
-        node->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
+    ctx->pico_pub = node->create_publisher<custom_interfaces::msg::ToPico>("/to_pico", 10);
 
-    ctx->pico_pub =
-        node->create_publisher<custom_interfaces::msg::ToPico>("/to_pico", 10);
-
-    // /imu   — orientation / yaw (BNO055, 10 Hz)
+    // IMU subscription (orientation / yaw)
     ctx->imu_sub =
         node->create_subscription<sensor_msgs::msg::Imu>(
             "/imu", 10,
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
                 ctx->imu_received = true;
             });
 
-    // /altimeter — altitude above pool floor (Float64, from Gazebo bridge)
+    // Altimeter subscription (altitude above pool floor)
     ctx->alt_sub =
         node->create_subscription<std_msgs::msg::Float64>(
             "/altimeter", 10,
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
                 ctx->latest_altimeter = msg->data;
             });
 
-    // /detections_3d — 3-D bounding boxes from data_distance_node (YOLO + depth fusion)
+    // 3D Detections subscription (YOLO + depth fusion)
     ctx->det_sub =
         node->create_subscription<vision_msgs::msg::Detection3DArray>(
             "/detections_3d", 10,
@@ -56,18 +56,19 @@ int main(int argc, char** argv) {
                 ctx->latest_detections = msg;
             });
 
-    // ── BT factory and node registration ──────────────────────────────────────
+    // --- Behavior Tree Initialization ---------------------------------------
     BT::BehaviorTreeFactory factory;
     registerAllNodes(factory);
-    // ── Dump TreeNodesModel XML for Groot2 ────────────────────────────────────
-{
-    std::string xml_models = BT::writeTreeNodesModelXML(factory);
-    std::ofstream model_file("bt_nodes_model.xml");
-    model_file << xml_models;
-    RCLCPP_INFO(node->get_logger(), "[main] Written bt_nodes_model.xml for Groot2");
-}
 
-    // ── Locate the XML tree file ───────────────────────────────────────────────
+    // Dump TreeNodesModel XML for Groot2 visualization
+    {
+        std::string xml_models = BT::writeTreeNodesModelXML(factory);
+        std::ofstream model_file("bt_nodes_model.xml");
+        model_file << xml_models;
+        RCLCPP_INFO(node->get_logger(), "[main] Written bt_nodes_model.xml for Groot2");
+    }
+
+    // Locate the XML mission file
     std::string xml_path;
     if (argc > 1) {
         xml_path = argv[1];
@@ -76,30 +77,27 @@ int main(int argc, char** argv) {
             xml_path = ament_index_cpp::get_package_share_directory("prequalification_bt")
                        + "/prequalification.xml";
         } catch (const std::exception& e) {
-            RCLCPP_FATAL(node->get_logger(),
-                         "Cannot find prequalification.xml: %s\n"
-                         "Build and source the package, or pass the path as argv[1].",
-                         e.what());
+            RCLCPP_FATAL(node->get_logger(), "Cannot find prequalification.xml: %s", e.what());
             rclcpp::shutdown();
             return 1;
         }
     }
-    RCLCPP_INFO(node->get_logger(), "Loading behaviour tree: %s", xml_path.c_str());
-
+    
+    RCLCPP_INFO(node->get_logger(), "Loading behavior tree: %s", xml_path.c_str());
     auto tree = factory.createTreeFromFile(xml_path);
 
-    // ── Groot2 Publisher (for real-time monitoring) ───────────────────────────
+    // Start Groot2 Publisher on default port 1667
     RCLCPP_INFO(node->get_logger(), "Starting Groot2 Publisher on port 1667...");
     BT::Groot2Publisher publisher(tree, 1667);
 
-    // ── Inject shared context into the blackboard ──────────────────────────────
+    // Inject shared context into the blackboard
     tree.rootBlackboard()->set("robot_context", ctx);
 
-    // ── Seed callbacks before first tick ──────────────────────────────────────
+    // Seed callbacks before first tick
     rclcpp::spin_some(node);
 
-    // ── Tick loop (10 Hz) ─────────────────────────────────────────────────────
-    RCLCPP_INFO(node->get_logger(), "=== Starting Pre-Qualification Maneuver ===");
+    // --- Mission Loop -------------------------------------------------------
+    RCLCPP_INFO(node->get_logger(), "=== Starting Pre-Qualification Mission ===");
 
     constexpr auto TICK_PERIOD = std::chrono::milliseconds(100);
     BT::NodeStatus status      = BT::NodeStatus::RUNNING;
@@ -113,9 +111,9 @@ int main(int argc, char** argv) {
     ctx->stopMotion();
 
     if (status == BT::NodeStatus::SUCCESS) {
-        RCLCPP_INFO(node->get_logger(), "=== Pre-Qualification COMPLETE ===");
+        RCLCPP_INFO(node->get_logger(), "=== Mission COMPLETE ===");
     } else {
-        RCLCPP_WARN(node->get_logger(), "=== Pre-Qualification FAILED ===");
+        RCLCPP_WARN(node->get_logger(), "=== Mission FAILED ===");
     }
 
     rclcpp::shutdown();

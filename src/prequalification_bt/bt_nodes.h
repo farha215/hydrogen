@@ -1,3 +1,9 @@
+/**
+ * @file bt_nodes.h
+ * @brief Behavior Tree node declarations for the RoboSub pre-qualification mission.
+ * @license Apache-2.0
+ */
+
 #pragma once
 
 #include "behaviortree_cpp/behavior_tree.h"
@@ -5,9 +11,6 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <nav_msgs/msg/path.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/float64.hpp>
 #include <vision_msgs/msg/detection3_d_array.hpp>
@@ -43,7 +46,7 @@ template <> inline Pose convertFromString(StringView str) {
 }
 
 /**
- * @brief Shared context for all Behavior Tree nodes to access ROS 2 interfaces and sensor data.
+ * @brief Shared context for Behavior Tree nodes to access ROS 2 interfaces and sensor data.
  */
 struct RobotContext {
     rclcpp::Node::SharedPtr node;
@@ -56,7 +59,6 @@ struct RobotContext {
 
     bool imu_received  = false;
 
-    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr     cmd_vel_pub;
     rclcpp::Publisher<custom_interfaces::msg::ToPico>::SharedPtr pico_pub;
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr              imu_sub;
@@ -64,7 +66,7 @@ struct RobotContext {
     rclcpp::Subscription<vision_msgs::msg::Detection3DArray>::SharedPtr det_sub;
 
     /**
-     * @brief Retrieves the current pose estimated from altimeter and IMU.
+     * @brief Retrieves the current pose estimated from sensors.
      */
     Pose getCurrentPose() {
         std::lock_guard<std::mutex> g(mtx);
@@ -83,7 +85,7 @@ struct RobotContext {
     }
 
     /**
-     * @brief Checks if a specific object is currently detected with sufficient confidence.
+     * @brief Checks if a specific object is currently detected.
      */
     bool isObjectSeen(const std::string& object) {
         std::lock_guard<std::mutex> g(mtx);
@@ -101,7 +103,7 @@ struct RobotContext {
     }
 
     /**
-     * @brief Gets the 3D position of a detected object relative to the camera.
+     * @brief Gets the 3D position of a detected object.
      */
     bool getObjectPosition(const std::string& object, double& ox, double& oy, double& oz) {
         std::lock_guard<std::mutex> g(mtx);
@@ -138,14 +140,15 @@ struct RobotContext {
     }
 
     /**
-     * @brief Commands the robot to stop all horizontal motion while maintaining depth.
+     * @brief Commands the robot to stop all horizontal motion.
      */
     void stopMotion() { 
         publishToPico(0.0f, 0.0f, 0.0f, (float)target_depth, 1); 
     }
 };
 
-// ─── Math utilities ───────────────────────────────────────────────────────────
+// --- Math Utilities --------------------------------------------------------
+
 inline double clampVal(double v, double lo, double hi) { return std::max(lo, std::min(hi, v)); }
 inline double normalizeAngle(double a) {
     while (a >  M_PI) a -= 2.0 * M_PI;
@@ -153,7 +156,7 @@ inline double normalizeAngle(double a) {
     return a;
 }
 
-// ─── Behavior Tree Node Declarations ─────────────────────────────────────────
+// --- Condition Nodes -------------------------------------------------------
 
 class AllSystemsOK : public BT::ConditionNode {
 public:
@@ -162,12 +165,14 @@ public:
     BT::NodeStatus tick() override;
 };
 
-class SaveToBlackboard : public BT::SyncActionNode {
+class IsObjectSeen : public BT::ConditionNode {
 public:
-    SaveToBlackboard(const std::string& name, const BT::NodeConfig& config) : BT::SyncActionNode(name, config) {}
-    static BT::PortsList providedPorts() { return { BT::OutputPort<Pose>("key") }; }
+    IsObjectSeen(const std::string& name, const BT::NodeConfig& config) : BT::ConditionNode(name, config) {}
+    static BT::PortsList providedPorts() { return { BT::InputPort<std::string>("object") }; }
     BT::NodeStatus tick() override;
 };
+
+// --- Action Nodes ----------------------------------------------------------
 
 class DiveToDepth : public BT::StatefulActionNode {
 public:
@@ -181,13 +186,6 @@ private:
     double staystill_ = 0.0;
     std::chrono::steady_clock::time_point stay_still_start_;
     bool in_stay_still_ = false;
-};
-
-class IsObjectSeen : public BT::ConditionNode {
-public:
-    IsObjectSeen(const std::string& name, const BT::NodeConfig& config) : BT::ConditionNode(name, config) {}
-    static BT::PortsList providedPorts() { return { BT::InputPort<std::string>("object") }; }
-    BT::NodeStatus tick() override;
 };
 
 class Do360Turn : public BT::StatefulActionNode {
@@ -215,7 +213,8 @@ private:
     enum class Phase { ALIGN, DRIVE, STAY_STILL };
     Phase phase_ = Phase::ALIGN;
     Pose entry_pose_;
-    double gate_depth_ = 6.0, start_time_ = 0.0, align_start_time_ = 0.0, gate_drive_time_ = 0.0;
+    double gate_depth_ = 6.0, start_time_ = 0.0, align_start_time_ = 0.0, gate_drive_time_ = 0.0, gate_lost_time_ = 0.0;
+    bool align_started_ = false, gate_lost_started_ = false;
     double staystill_ = 0.0;
     std::chrono::steady_clock::time_point stay_still_start_;
 };
@@ -232,6 +231,7 @@ public:
 private:
     Pose target_;
     double start_time_ = 0.0, duration_ = 15.0;
+    bool surge_started_ = false;
 };
 
 class OrbitPole : public BT::StatefulActionNode {
@@ -247,7 +247,7 @@ public:
     BT::NodeStatus onRunning() override;
     void onHalted() override;
 private:
-    enum class Phase { ALIGN, TURN, SURGE, STAY_STILL };
+    enum class Phase { ALIGN, APPROACH, TURN, SURGE, STAY_STILL };
     Phase phase_ = Phase::ALIGN;
     std::string target_object_;
     double threshold_ = 1.5, target_yaw_ = 0.0, locked_yaw_ = 0.0, start_time_ = 0.0, surge_duration_ = 4.0;
@@ -256,9 +256,11 @@ private:
     std::chrono::steady_clock::time_point stay_still_start_;
 };
 
+/**
+ * @brief Registration helper for the Behavior Tree factory.
+ */
 inline void registerAllNodes(BT::BehaviorTreeFactory& factory) {
     factory.registerNodeType<AllSystemsOK>("AllSystemsOK");
-    factory.registerNodeType<SaveToBlackboard>("SaveToBlackboard");
     factory.registerNodeType<DiveToDepth>("DiveToDepth");
     factory.registerNodeType<IsObjectSeen>("IsObjectSeen");
     factory.registerNodeType<Do360Turn>("Do360Turn");
